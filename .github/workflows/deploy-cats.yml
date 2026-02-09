@@ -1,0 +1,35 @@
+name: Deploy Cats Image to ECR
+
+on: 
+  push:
+    branches: [ dev ]   # ← trigger on dev branch instead of master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      run: |
+        aws ecr get-login-password --region us-east-1 | \
+        docker login --username AWS --password-stdin 459956101257.dkr.ecr.us-east-1.amazonaws.com
+
+    - name: Build, tag, and push Cats image
+      env:
+        ECR_REGISTRY: 459956101257.dkr.ecr.us-east-1.amazonaws.com
+        ECR_REPOSITORY: project1-cats
+        IMAGE_TAG: v0.1
+      run: |
+        cd cats
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
