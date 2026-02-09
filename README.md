@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-# clo835-lab1
+
 =======
 <<<<<<< HEAD
 # varnika-on-cloud
