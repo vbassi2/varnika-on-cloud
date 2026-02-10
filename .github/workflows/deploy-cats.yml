@@ -1,35 +1,47 @@
-name: Deploy Cats Image to ECR
+name: Deploy to Amazon ECR Repo
 
 on: 
   push:
-    branches: [ dev ]   # ← trigger on dev branch instead of master
+    branches: [ master ]
 
 jobs:
+  
   build:
+    
+    name: Build Image
     runs-on: ubuntu-latest
 
+   
     steps:
-    - name: Check out code
-      uses: actions/checkout@v3
 
+    - name: Check out code
+      uses: actions/checkout@v2
+      
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
         aws-region: us-east-1
 
     - name: Login to Amazon ECR
-      run: |
-        aws ecr get-login-password --region us-east-1 | \
-        docker login --username AWS --password-stdin 459956101257.dkr.ecr.us-east-1.amazonaws.com
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build, tag, and push Cats image
+    - name: Build, test, tag, and push cat image to Amazon ECR
       env:
-        ECR_REGISTRY: 459956101257.dkr.ecr.us-east-1.amazonaws.com
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: project1-cats
-        IMAGE_TAG: v0.1
+        IMAGE_TAG: v1.2
       run: |
-        cd cats
+        ls -ltra
+        # Docker build
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        # Unit test
+        docker run -d -p 8081:81 --name nodeapp $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker ps
+        echo "Pause for 10 seconds to let container start"
+        sleep 10
+        curl localhost:8081 -vvv
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
